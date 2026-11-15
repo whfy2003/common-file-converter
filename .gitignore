@@ -1,0 +1,31 @@
+# 打包产物（体积大，Release 中提供）
+_internal/
+dist/
+build/
+tools/
+*.spec
+
+# 可执行文件与安装包
+Document Tool.exe
+installer/*.exe
+
+# FFmpeg 二进制（体积过大，不放入仓库）
+bin/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 运行时数据
+settings.json
+
+# 测试运行时生成
+tests/sample_data/
+tests/media_sample/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+desktop.ini
