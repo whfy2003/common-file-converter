@@ -1,5 +1,19 @@
 # Document Tool
 
+[![最新版](https://img.shields.io/github/v/release/whfy2003/common-file-converter?style=for-the-badge&color=2ea44f&label=%E6%9C%80%E6%96%B0%E7%89%88)](https://github.com/whfy2003/common-file-converter/releases/latest)
+[![平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-Windows%2010%20%7C%2011-0078D4?style=for-the-badge&logo=windows)](https://github.com/whfy2003/common-file-converter/releases/latest)
+
+## ⬇️ 下载
+
+前往 **[Releases 页面](https://github.com/whfy2003/common-file-converter/releases/latest)** 下载最新版：
+
+| 版本 | 文件 | 说明 |
+| --- | --- | --- |
+| **安装版（推荐）** | `Document Tool 安装程序 1.0.exe` | 双击安装，自动创建开始菜单与桌面快捷方式，卸载干净 |
+| **便携版** | `Document Tool 便携版 1.0.zip` | 解压到任意文件夹，双击 `Document Tool.exe` 即用 |
+
+安装包与便携版都已内置 Python 运行环境和 FFmpeg，**目标电脑无需安装任何依赖**，Windows 10 / 11 直接可用。
+
 一个 Windows 11 风格的桌面工具：把文件夹里的图片或随手选中的多张图片合并成连续 PDF，并支持图片 / 视频 / 音频格式转换、字幕与音轨提取。
 
 界面采用 Win11 设置页的分组卡片与圆角控件，支持日间 / 夜间模式，左下角的太阳 / 月亮按钮点一下即可切换。
