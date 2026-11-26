@@ -8,6 +8,7 @@ tools/
 # 可执行文件与安装包
 Document Tool.exe
 installer/*.exe
+installer/*.zip
 
 # FFmpeg 二进制（体积过大，不放入仓库）
 bin/

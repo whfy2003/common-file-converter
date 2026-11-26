@@ -67,6 +67,7 @@ class ExtractPage(QWidget):
         self._rows: list[tuple[Path, Stream]] = []
         self._running = False
         self._controller = ProcessController()
+        self.setAcceptDrops(True)
         self.file_status.connect(self._on_file_status)
         self._build()
 
@@ -164,12 +165,15 @@ class ExtractPage(QWidget):
             f"视频文件 ({patterns});;所有文件 (*.*)")
         if not files:
             return
+        self._add_paths([Path(text) for text in files])
 
+    def _add_paths(self, paths: list[Path]) -> None:
         added = 0
         existing = {(source, stream.type_index, stream.kind)
                     for source, stream in self._rows}
-        for text in files:
-            path = Path(text)
+        for path in paths:
+            if not path.is_file():
+                continue
             try:
                 info = media.probe(path)
             except Exception as exc:  # noqa: BLE001
@@ -189,6 +193,52 @@ class ExtractPage(QWidget):
             added += 1
         if added:
             self._refresh_table()
+
+    # ------------------------------------------------------------------ 拖放
+    def _accepts_file(self, path: Path) -> bool:
+        return path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS
+
+    def _files_from_drop(self, paths: list[Path]) -> list[Path]:
+        found: list[Path] = []
+        for path in paths:
+            if self._accepts_file(path):
+                found.append(path)
+            elif path.is_dir():
+                try:
+                    found.extend(sorted(p for p in path.iterdir() if self._accepts_file(p)))
+                except OSError:
+                    continue
+        return found
+
+    def dragEnterEvent(self, event) -> None:
+        if self._running:
+            event.ignore()
+            return
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                path = Path(url.toLocalFile())
+                if self._accepts_file(path) or path.is_dir():
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dragMoveEvent(self, event) -> None:
+        if event.mimeData().hasUrls() and not self._running:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event) -> None:
+        if self._running:
+            event.ignore()
+            return
+        paths = [Path(url.toLocalFile()) for url in event.mimeData().urls()]
+        files = self._files_from_drop(paths)
+        if files:
+            self._add_paths(files)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def _remove_selected(self) -> None:
         if self._running:

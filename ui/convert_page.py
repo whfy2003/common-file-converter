@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QSlider,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
@@ -94,6 +95,7 @@ class ConvertPage(QWidget):
         self._paths: list[Path] = []
         self._running = False
         self._controller = ProcessController()
+        self.setAcceptDrops(True)
         self.file_status.connect(self._on_file_status)
         self._build()
 
@@ -143,11 +145,17 @@ class ConvertPage(QWidget):
         if self.kind == "image":
             row1.addSpacing(16)
             row1.addWidget(QLabel("输出质量"))
-            self.quality_combo = ComboBox()
-            for value, label in QUALITY_LABELS.items():
-                self.quality_combo.addItem(label, value)
-            self.quality_combo.setCurrentIndex(1)
-            row1.addWidget(self.quality_combo)
+            self.quality_slider = QSlider(Qt.Horizontal)
+            self.quality_slider.setRange(10, 100)
+            self.quality_slider.setValue(92)
+            self.quality_slider.setSingleStep(1)
+            self.quality_slider.setFixedWidth(200)
+            self.quality_slider.valueChanged.connect(self._on_quality_changed)
+            row1.addWidget(self.quality_slider)
+            self.quality_value_label = QLabel("92")
+            self.quality_value_label.setObjectName("Hint")
+            self.quality_value_label.setMinimumWidth(32)
+            row1.addWidget(self.quality_value_label)
 
         if self.kind == "video":
             row1.addSpacing(16)
@@ -250,6 +258,9 @@ class ConvertPage(QWidget):
 
         layout.addWidget(settings)
 
+    def _on_quality_changed(self, value: int) -> None:
+        self.quality_value_label.setText(str(value))
+
     # ------------------------------------------------------------------ ICO
     def _on_target_changed(self, _index: int = 0) -> None:
         if self.kind != "image":
@@ -336,10 +347,14 @@ class ConvertPage(QWidget):
             f"{KIND_LABELS[self.kind]}文件 ({patterns});;所有文件 (*.*)")
         if not files:
             return
+        self._add_paths([Path(text) for text in files])
+
+    def _add_paths(self, files: list[Path]) -> None:
         existing = {str(path).lower() for path in self._paths}
         added = 0
-        for text in files:
-            path = Path(text)
+        for path in files:
+            if not path.is_file():
+                continue
             if str(path).lower() in existing:
                 continue
             self._paths.append(path)
@@ -348,6 +363,52 @@ class ConvertPage(QWidget):
         if added:
             self._refresh_table()
             self._update_ico_preview()
+
+    # ------------------------------------------------------------------ 拖放
+    def _accepts_file(self, path: Path) -> bool:
+        return path.is_file() and path.suffix.lower() in self._extensions()
+
+    def _files_from_drop(self, paths: list[Path]) -> list[Path]:
+        found: list[Path] = []
+        for path in paths:
+            if self._accepts_file(path):
+                found.append(path)
+            elif path.is_dir():
+                try:
+                    found.extend(sorted(p for p in path.iterdir() if self._accepts_file(p)))
+                except OSError:
+                    continue
+        return found
+
+    def dragEnterEvent(self, event) -> None:
+        if self._running:
+            event.ignore()
+            return
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                path = Path(url.toLocalFile())
+                if self._accepts_file(path) or path.is_dir():
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dragMoveEvent(self, event) -> None:
+        if event.mimeData().hasUrls() and not self._running:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event) -> None:
+        if self._running:
+            event.ignore()
+            return
+        paths = [Path(url.toLocalFile()) for url in event.mimeData().urls()]
+        files = self._files_from_drop(paths)
+        if files:
+            self._add_paths(files)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def _remove_selected(self) -> None:
         if self._running:
@@ -418,7 +479,7 @@ class ConvertPage(QWidget):
             "quality": 92,
         }
         if self.kind == "image":
-            options["quality"] = int(self.quality_combo.currentData())
+            options["quality"] = int(self.quality_slider.value())
         if self.kind == "video":
             options["hardware"] = self.hardware_combo.currentData()
             options["subtitles"] = self.subtitle_combo.currentData()
